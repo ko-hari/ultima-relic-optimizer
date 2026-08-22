@@ -1,0 +1,6 @@
+# Raspberry Pi OS Lite 64-bit / ARM64 web-only runtime
+numpy>=1.26
+Pillow>=10.0
+opencv-python-headless>=4.8
+Flask>=3.0
+gunicorn>=22.0

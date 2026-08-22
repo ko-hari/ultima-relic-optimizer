@@ -1,0 +1,21 @@
+[Unit]
+Description=Board Item Optimizer Web GUI
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/travel
+Environment=PYTHONUNBUFFERED=1
+Environment=BOARD_OPTIMIZER_MAX_MC_ITERATIONS=10000
+Environment=BOARD_OPTIMIZER_MAX_UPLOAD_BYTES=8388608
+ExecStart=/home/pi/travel/.venv/bin/gunicorn --config /home/pi/travel/deploy/gunicorn.conf.py web_app:app
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

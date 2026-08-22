@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Board Item Optimizer · Web Console</title>
+  <link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark">BI</div>
+      <div>
+        <div class="eyebrow">BOARD ITEM OPTIMIZER</div>
+        <h1>Board Command Console</h1>
+      </div>
+      <div class="topbar-status"><span class="status-dot"></span><span id="serverStatus">LOCAL ENGINE</span></div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar panel">
+        <div class="panel-heading"><div><span class="eyebrow">CONTROL DECK</span><h2>분석 설정</h2></div><span class="gear">⌘</span></div>
+        <label id="uploadZone" class="upload-zone" for="imageInput" tabindex="0">
+          <span class="upload-icon">↥</span>
+          <strong id="fileLabel">샘플 보드 사용 중</strong>
+          <small>PNG / JPG 업로드 · 캡처 후 Ctrl+V 붙여넣기</small>
+          <input id="imageInput" type="file" accept="image/png,image/jpeg">
+        </label>
+        <div id="pasteHint" class="paste-hint" aria-live="polite">클립보드 이미지는 이 페이지 어디에서나 붙여넣을 수 있습니다.</div>
+        <button id="sampleButton" class="button ghost full">샘플 이미지로 복원</button>
+
+        <div class="control-group">
+          <label for="objective">최적화 목표</label>
+          <select id="objective">
+            <option value="balanced">균형형</option>
+            <option value="maximize_expected_rewards">기대 보상 최대화</option>
+            <option value="maximize_explored_cells">탐색 칸 최대화</option>
+            <option value="maximize_completion_probability">완료 확률 최대화</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="mode">평가 방식</label>
+          <select id="mode"><option value="analytical">정확 기대값</option><option value="monte_carlo">Monte Carlo 검증</option></select>
+        </div>
+        <div class="control-group hidden-control" id="iterationWrap">
+          <label for="iterations">반복 횟수</label>
+          <input id="iterations" type="number" min="100" max="100000" step="100" value="1000">
+        </div>
+
+        <div class="inventory-title"><span>현재 아이템 수량</span><span class="hint">이미지 자동 인식</span></div>
+        <div id="inventoryGrid" class="inventory-grid"></div>
+        <div class="auto-items-note"><span>AUTO</span><p><b>Gunpowder Barrel · Key</b><br>획득 즉시 발동 · 수량 및 추천 제외</p></div>
+        <button id="recommendButton" class="button primary full">추천 계산 <span>↗</span></button>
+        <div id="errorBox" class="error-box" hidden></div>
+      </aside>
+
+      <section class="workspace">
+        <div class="stats-row">
+          <div class="stat-card"><span class="stat-label">BOARD STATE</span><strong id="boardSize">—</strong><span id="boardSource">스크린샷 대기 중</span></div>
+          <div class="stat-card"><span class="stat-label">FOUND REWARDS</span><strong id="foundRewards">—</strong><span id="remainingRewards">남은 보상 —</span></div>
+          <div class="stat-card"><span class="stat-label">UNKNOWN CELLS</span><strong id="unknownCells">—</strong><span id="detectorName">분석기 —</span></div>
+          <div class="stat-card accent"><span class="stat-label">TOP SCORE</span><strong id="topScore">—</strong><span id="topItem">추천 대기 중</span></div>
+        </div>
+        <div class="board-panel panel">
+          <div class="board-header"><div><span class="eyebrow">TACTICAL MAP</span><h2>실시간 보드 오버레이</h2></div><div class="legend"><span><i class="legend-unknown"></i>미확인</span><span><i class="legend-reward"></i>보상</span><span><i class="legend-effect"></i>효과 범위</span><span><i class="legend-target"></i>추천 표적</span></div></div>
+          <div class="board-stage"><canvas id="boardCanvas" width="390" height="474"></canvas><div id="boardLoading" class="board-loading">보드를 불러오는 중…</div></div>
+          <div class="board-footer"><span id="boardMessage">스크린샷을 분석하면 추천 표적이 보드 위에 표시됩니다.</span><span class="coordinate-note">좌표: x=열 · y=행 · 1부터 시작</span></div>
+        </div>
+      </section>
+
+      <aside class="recommendations panel">
+        <div class="panel-heading"><div><span class="eyebrow">DECISION FEED</span><h2>추천 Top 5</h2></div><span id="recommendCount" class="count-badge">0</span></div>
+        <div id="recommendationList" class="recommendation-list"><div class="empty-state"><span>◎</span><strong>추천을 계산하세요</strong><small>보드와 아이템 수량을 확인한 뒤<br>추천 계산을 눌러주세요.</small></div></div>
+        <div class="reason-panel"><span class="eyebrow">WHY THIS MOVE</span><div id="reasonTitle">Top-1을 선택하면 분석 이유가 표시됩니다.</div><p id="reasonText">균등 보상 분포를 기준으로 새로 탐색할 칸, 기대 보상, 보상 발견 확률을 함께 계산합니다.</p><div class="reason-metrics"><span>보상 1개 이상 <b id="atLeastOne">—</b></span><span>완료 확률 <b id="completion">—</b></span></div></div>
+      </aside>
+    </main>
+    <footer class="footer"><span>Board Item Optimizer · stochastic decision support</span><span>Python engine + browser UI</span></footer>
+  </div>
+  <script src="/web/app.js"></script>
+</body>
+</html>

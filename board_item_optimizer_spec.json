@@ -1,0 +1,391 @@
+{
+  "project": {
+    "name": "Board Item Optimizer",
+    "description": "Analyze a game board and the currently available items, then recommend the best item and target position to maximize expected rewards or explored cells.",
+    "development_tool": "Codex",
+    "language": "Python"
+  },
+  "game_rules": {
+    "board_sizes": {
+      "5x5": {
+        "width": 5,
+        "height": 5,
+        "reward_count": 8
+      },
+      "10x10": {
+        "width": 10,
+        "height": 10,
+        "reward_count": 32
+      },
+      "15x15": {
+        "width": 15,
+        "height": 15,
+        "reward_count": 72
+      }
+    },
+    "rules": [
+      "Rewards are randomly distributed across the board.",
+      "The board ends immediately when all rewards have been found.",
+      "After a certain amount of time, a random cell may be revealed automatically. Revealing a cell means determining whether it contains a reward. Once revealed, the cell is no longer affected by item effects.",
+      "Items can be obtained over time, and each item has a different effect."
+    ]
+  },
+  "cell_states": {
+    "unknown": {
+      "description": "The reward status has not been determined.",
+      "can_be_selected": true,
+      "affected_by_items": true
+    },
+    "reward_found": {
+      "description": "A reward has already been confirmed.",
+      "can_be_selected": false,
+      "affected_by_items": false
+    },
+    "no_reward": {
+      "description": "The cell has already been checked and contains no reward.",
+      "can_be_selected": false,
+      "affected_by_items": false
+    }
+  },
+  "items": {
+    "Boom": {
+      "target_required": true,
+      "target_selection": "manual",
+      "available_on": [
+        "5x5",
+        "10x10",
+        "15x15"
+      ],
+      "effect": {
+        "type": "area",
+        "size": "3x3",
+        "centered_on_target": true,
+        "target_states": [
+          "unknown"
+        ]
+      },
+      "reward_multiplier": 1
+    },
+    "Special Boom": {
+      "target_required": true,
+      "target_selection": "manual",
+      "available_on": [
+        "5x5",
+        "10x10",
+        "15x15"
+      ],
+      "effect": {
+        "type": "area",
+        "size": "3x3",
+        "centered_on_target": true,
+        "target_states": [
+          "unknown"
+        ]
+      },
+      "reward_multiplier": 2,
+      "multiplier_condition": "Only newly discovered rewards receive the 2x reward. Rewards already revealed before using Special Boom are not doubled."
+    },
+    "Lazer X": {
+      "target_required": true,
+      "target_selection": "manual",
+      "available_on": [
+        "5x5",
+        "10x10",
+        "15x15"
+      ],
+      "effect": {
+        "type": "line",
+        "axis": "x",
+        "target_states": [
+          "unknown"
+        ]
+      }
+    },
+    "Lazer Y": {
+      "target_required": true,
+      "target_selection": "manual",
+      "available_on": [
+        "5x5",
+        "10x10",
+        "15x15"
+      ],
+      "effect": {
+        "type": "line",
+        "axis": "y",
+        "target_states": [
+          "unknown"
+        ]
+      }
+    },
+    "Gunpowder Barrel": {
+      "target_required": false,
+      "target_selection": "random_unknown_cell",
+      "available_on": [
+        "10x10",
+        "15x15"
+      ],
+      "unavailable_on": [
+        "5x5"
+      ],
+      "effect": {
+        "type": "area",
+        "size": "3x3",
+        "centered_on_random_target": true,
+        "target_states": [
+          "unknown"
+        ]
+      }
+    },
+    "Key": {
+      "target_required": false,
+      "target_selection": "none",
+      "available_on": [
+        "5x5",
+        "10x10",
+        "15x15"
+      ],
+      "effect": {
+        "type": "global_reward_scan",
+        "description": "Automatically reveals every cell containing a reward."
+      },
+      "result": {
+        "all_rewards_collected": true,
+        "board_ends_immediately": true
+      }
+    }
+  },
+  "item_inventory": {
+    "type": "dynamic",
+    "description": "Items can be used multiple times. The available quantity increases over time, so there is no fixed initial or maximum quantity.",
+    "current_inventory_is_input": true
+  },
+  "reward_probability_model": {
+    "initial_distribution": "uniform",
+    "description": "At the beginning, all eligible unknown cells have the same probability of containing a reward.",
+    "dynamic_update": {
+      "enabled": true,
+      "type": "conditional_probability",
+      "description": "Each revealed result changes the reward probability of the remaining unknown cells.",
+      "default_formula": "P(reward_i) = remaining_rewards / eligible_unknown_cells"
+    },
+    "future_extension": "Support non-uniform probability models learned from observed gameplay data."
+  },
+  "item_effect_rules": {
+    "common": "Already revealed cells do not receive item effects.",
+    "area_3x3": "A target cell affects all unknown cells within one cell of the target in both x and y directions. Out-of-bounds cells are ignored.",
+    "lazer_x": "Affects every unknown cell in the same row.",
+    "lazer_y": "Affects every unknown cell in the same column.",
+    "gunpowder_barrel": "A random eligible unknown cell becomes the center of the 3x3 effect.",
+    "key": "Reveals all reward-containing cells and immediately ends the board."
+  },
+  "optimization": {
+    "problem_type": "stochastic sequential decision problem",
+    "primary_goal": "Maximize expected reward gain.",
+    "secondary_goals": [
+      "Maximize expected newly explored cells.",
+      "Maximize probability of finding at least one reward.",
+      "Maximize probability of completing the board.",
+      "Minimize wasted item usage."
+    ],
+    "single_action": {
+      "description": "Find the best target position for one selected item.",
+      "method": "Enumerate all valid target cells and evaluate each candidate."
+    },
+    "multi_action": {
+      "description": "Optimize item order and target positions across multiple future actions.",
+      "methods": [
+        "Greedy",
+        "Beam Search",
+        "Monte Carlo",
+        "Future: MCTS"
+      ]
+    },
+    "dynamic_recalculation": true
+  },
+  "objective_functions": {
+    "maximize_expected_rewards": {
+      "description": "Maximize the expected number of newly obtained rewards."
+    },
+    "maximize_explored_cells": {
+      "description": "Maximize the expected number of newly revealed cells."
+    },
+    "maximize_completion_probability": {
+      "description": "Maximize the probability of completing the board."
+    },
+    "balanced": {
+      "weights": {
+        "expected_rewards": 0.5,
+        "explored_cells": 0.2,
+        "completion_probability": 0.3
+      }
+    }
+  },
+  "special_item_logic": {
+    "Special Boom": {
+      "position_optimization": true,
+      "reward_multiplier_only_for_new_rewards": true
+    },
+    "Gunpowder Barrel": {
+      "position_optimization": false,
+      "evaluation": "Expected value over all possible random centers."
+    },
+    "Key": {
+      "position_optimization": false,
+      "evaluation": "Decide whether using the Key now is better than continuing with other items."
+    }
+  },
+  "simulation": {
+    "required": true,
+    "method": "Monte Carlo",
+    "default_iterations": 10000,
+    "random_seed": 42,
+    "confidence_level": 0.95,
+    "state_transition": [
+      "Clone the current board state.",
+      "Select an item and target according to the item rules.",
+      "Resolve newly explored cells.",
+      "Apply reward multipliers.",
+      "Update cell states and remaining rewards.",
+      "Update reward probabilities.",
+      "Check for board completion.",
+      "Record the result."
+    ]
+  },
+  "recommendation_output": {
+    "top_n": 5,
+    "fields": [
+      "rank",
+      "item",
+      "target_x",
+      "target_y",
+      "expected_newly_explored_cells",
+      "expected_rewards",
+      "probability_of_at_least_one_reward",
+      "probability_of_completion",
+      "score",
+      "reason"
+    ]
+  },
+  "image_analysis": {
+    "goal": "Convert a screenshot into the structured board state used by the optimizer.",
+    "sample_image": "Sample_Board.png",
+    "expected_sample_size": "15x15",
+    "pipeline": [
+      "Detect board region.",
+      "Detect grid boundaries.",
+      "Identify board size.",
+      "Map pixels to cells.",
+      "Classify each cell state.",
+      "Detect visible reward icons.",
+      "Separate board contents from UI elements."
+    ],
+    "implementation_order": [
+      "OpenCV geometric detection",
+      "Template matching for icons",
+      "Optional object detection model if necessary"
+    ]
+  },
+  "development_phases": [
+    {
+      "phase": 1,
+      "name": "Board Model",
+      "tasks": [
+        "Implement Board and Cell classes.",
+        "Support 5x5, 10x10, and 15x15 boards.",
+        "Support unknown, reward_found, and no_reward states."
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Item Effect Engine",
+      "tasks": [
+        "Implement Boom.",
+        "Implement Special Boom.",
+        "Implement Lazer X.",
+        "Implement Lazer Y.",
+        "Implement Gunpowder Barrel.",
+        "Implement Key."
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Basic Optimizer",
+      "tasks": [
+        "Enumerate valid target positions.",
+        "Calculate newly explored cells.",
+        "Calculate expected reward gain.",
+        "Return Top-N recommendations."
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Probability and Simulation",
+      "tasks": [
+        "Implement conditional probability updates.",
+        "Implement Monte Carlo simulation.",
+        "Calculate completion probability.",
+        "Validate analytical results against simulations."
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Sequential Optimization",
+      "tasks": [
+        "Optimize multiple item uses.",
+        "Implement Greedy baseline.",
+        "Implement Beam Search.",
+        "Evaluate long-term item usage."
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "Image Recognition",
+      "tasks": [
+        "Detect the board in Sample_Board.png.",
+        "Detect the 15x15 grid.",
+        "Classify cell states.",
+        "Detect rewards.",
+        "Validate against manually annotated data."
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "Integration",
+      "tasks": [
+        "Connect screenshot input to Board State.",
+        "Connect current item inventory.",
+        "Overlay recommendations on the original image.",
+        "Display human-readable reasoning."
+      ]
+    }
+  ],
+  "initial_codex_task": {
+    "goal": "Build the Board Simulator and Item Optimizer before implementing image recognition.",
+    "required_files": [
+      "models/board.py",
+      "models/cell.py",
+      "models/item.py",
+      "engine/effects.py",
+      "engine/probability.py",
+      "engine/simulator.py",
+      "optimizer/greedy.py",
+      "optimizer/exhaustive.py",
+      "optimizer/monte_carlo.py",
+      "tests/test_board.py",
+      "tests/test_items.py",
+      "tests/test_probability.py",
+      "tests/test_optimizer.py",
+      "main.py"
+    ],
+    "first_milestone": [
+      "Generate all supported board sizes.",
+      "Initialize reward counts.",
+      "Support revealed and unrevealed cells.",
+      "Implement all six items.",
+      "Evaluate all valid target positions.",
+      "Evaluate random-center expected values for Gunpowder Barrel.",
+      "Evaluate Key as a decision instead of a position.",
+      "Return Top-5 recommendations."
+    ]
+  }
+}

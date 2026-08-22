@@ -1,0 +1,265 @@
+openapi: 3.1.0
+info:
+  title: Board Item Optimizer API
+  version: 1.0.0
+  description: >-
+    Screenshot analysis and single-action recommendation API. API coordinates
+    are zero-based; clients should add one for user-facing coordinates.
+servers:
+  - url: http://127.0.0.1:5000
+    description: Same-host service, recommended for a Discord bot
+  - url: http://raspberrypi.local:5000
+    description: Raspberry Pi LAN service
+tags:
+  - name: system
+  - name: analysis
+  - name: optimization
+paths:
+  /api/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Check service health and runtime limits
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /api/analyze:
+    post:
+      tags: [analysis]
+      operationId: analyzeBoardImage
+      summary: Detect board state and item quantities from a screenshot
+      description: If image is omitted, the bundled Sample_Board.png is analyzed.
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: PNG or JPEG game screenshot
+      responses:
+        "200":
+          description: Structured board analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardAnalysis"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          description: Uploaded image exceeds the configured byte limit
+  /api/recommend:
+    post:
+      tags: [optimization]
+      operationId: recommendActions
+      summary: Return up to five ranked item actions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendationRequest"
+      responses:
+        "200":
+          description: Ranked recommendations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+components:
+  responses:
+    BadRequest:
+      description: Invalid board or request value
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Health:
+      type: object
+      required: [ok, opencv, max_monte_carlo_iterations]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        opencv:
+          type: boolean
+        max_monte_carlo_iterations:
+          type: integer
+          minimum: 100
+    CellState:
+      type: string
+      enum: [unknown, reward_found, no_reward]
+    Inventory:
+      type: object
+      additionalProperties: false
+      required: [Boom, Special Boom, Lazer X, Lazer Y]
+      properties:
+        Boom:
+          type: integer
+          minimum: 0
+        Special Boom:
+          type: integer
+          minimum: 0
+        Lazer X:
+          type: integer
+          minimum: 0
+        Lazer Y:
+          type: integer
+          minimum: 0
+    BoardRegion:
+      type: object
+      additionalProperties: false
+      required: [left, top, right, bottom, width, height]
+      properties:
+        left: {type: integer, minimum: 0}
+        top: {type: integer, minimum: 0}
+        right: {type: integer, minimum: 1}
+        bottom: {type: integer, minimum: 1}
+        width: {type: integer, enum: [5, 10, 15]}
+        height: {type: integer, enum: [5, 10, 15]}
+    Coordinate:
+      type: array
+      prefixItems:
+        - {type: integer, minimum: 0}
+        - {type: integer, minimum: 0}
+      minItems: 2
+      maxItems: 2
+    BoardInput:
+      type: object
+      required: [width, height, reward_count, states]
+      properties:
+        width: {type: integer, enum: [5, 10, 15]}
+        height: {type: integer, enum: [5, 10, 15]}
+        reward_count:
+          type: integer
+          enum: [8, 32, 72]
+        states:
+          type: array
+          items:
+            $ref: "#/components/schemas/CellState"
+          description: Row-major array with width × height entries
+    BoardAnalysis:
+      allOf:
+        - $ref: "#/components/schemas/BoardInput"
+        - type: object
+          required:
+            - found_rewards
+            - remaining_rewards
+            - unknown_count
+            - region
+            - image_data_url
+            - reward_centers
+            - inventory
+            - detector
+            - source
+          properties:
+            found_rewards: {type: integer, minimum: 0}
+            remaining_rewards: {type: integer, minimum: 0}
+            unknown_count: {type: integer, minimum: 0}
+            region:
+              $ref: "#/components/schemas/BoardRegion"
+            image_data_url:
+              type: string
+              pattern: "^data:image/png;base64,"
+            reward_centers:
+              type: array
+              items:
+                $ref: "#/components/schemas/Coordinate"
+            inventory:
+              $ref: "#/components/schemas/Inventory"
+            detector:
+              type: string
+              enum: [opencv, pillow/numpy]
+            source:
+              type: string
+              enum: [upload, sample]
+    Objective:
+      type: string
+      enum:
+        - balanced
+        - maximize_expected_rewards
+        - maximize_explored_cells
+        - maximize_completion_probability
+    RecommendationRequest:
+      type: object
+      additionalProperties: false
+      required: [board, inventory]
+      properties:
+        board:
+          $ref: "#/components/schemas/BoardInput"
+        inventory:
+          $ref: "#/components/schemas/Inventory"
+        objective:
+          $ref: "#/components/schemas/Objective"
+        mode:
+          type: string
+          enum: [analytical, monte_carlo]
+          default: analytical
+        iterations:
+          type: integer
+          minimum: 100
+          default: 1000
+          description: Server clamps this value to its configured maximum.
+    Recommendation:
+      type: object
+      required:
+        - item
+        - target
+        - target_x
+        - target_y
+        - expected_newly_explored_cells
+        - expected_rewards
+        - probability_of_at_least_one_reward
+        - probability_of_completion
+        - score
+        - reason
+      properties:
+        item:
+          type: string
+          enum: [Boom, Special Boom, Lazer X, Lazer Y]
+        target:
+          oneOf:
+            - $ref: "#/components/schemas/Coordinate"
+            - type: "null"
+        target_x:
+          type: [integer, "null"]
+          minimum: 0
+        target_y:
+          type: [integer, "null"]
+          minimum: 0
+        expected_newly_explored_cells: {type: number, minimum: 0}
+        expected_rewards: {type: number, minimum: 0}
+        probability_of_at_least_one_reward: {type: number, minimum: 0, maximum: 1}
+        probability_of_completion: {type: number, minimum: 0, maximum: 1}
+        score: {type: number}
+        reason: {type: string}
+    RecommendationResponse:
+      type: object
+      required: [recommendations, mode, iterations]
+      properties:
+        recommendations:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/Recommendation"
+        mode:
+          type: string
+          enum: [analytical, monte_carlo]
+        iterations:
+          type: [integer, "null"]
+          minimum: 100
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
