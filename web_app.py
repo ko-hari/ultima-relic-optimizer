@@ -103,8 +103,8 @@ def analyze():
         image = Image.open(upload.stream).convert("RGB")
         source = "upload"
     else:
-        image = Image.open(BASE_DIR / "Sample_Board.png").convert("RGB")
-        source = "sample"
+        image = Image.open(BASE_DIR / "Default.png").convert("RGB")
+        source = "default"
     result = ScreenshotAnalyzer().analyze_image(image)
     response = board_payload(result)
     response["source"] = source

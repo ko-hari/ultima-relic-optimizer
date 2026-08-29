@@ -43,14 +43,16 @@ def test_sample_analysis_and_recommendation_flow():
     assert (board["width"], board["height"]) == (15, 15)
     assert len(board["states"]) == 225
     assert board["reward_count"] == 72
+    assert board["source"] == "default"
     assert board["inventory"] == {
         "Boom": 0,
         "Special Boom": 0,
         "Lazer X": 0,
         "Lazer Y": 0,
     }
-    assert board["found_rewards"] == 23
-    assert board["states"][8 * 15] == "reward_found"
+    assert board["found_rewards"] == 0
+    assert board["unknown_count"] == 225
+    assert all(state == "unknown" for state in board["states"])
 
     recommended = client.post("/api/recommend", json={
         "board": board,

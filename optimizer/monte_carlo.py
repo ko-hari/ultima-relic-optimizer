@@ -20,6 +20,17 @@ def monte_carlo_recommendations(board: Board, inventory: dict[str, int], objecti
             result.probability_of_completion,
             candidate.score,
             candidate.reason + f" Monte Carlo {iterations:,}회로 검증했습니다.",
+            candidate.next_lazer_x_cells,
+            candidate.next_lazer_y_cells,
+            candidate.next_lazer_average_cells,
         ))
-    output.sort(key=lambda e: (e.score, e.expected_rewards), reverse=True)
+    output.sort(
+        key=lambda e: (
+            e.score,
+            e.expected_rewards,
+            e.expected_newly_explored_cells,
+            e.next_lazer_average_cells,
+        ),
+        reverse=True,
+    )
     return output[:top_n]

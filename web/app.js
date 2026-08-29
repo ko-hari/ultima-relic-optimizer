@@ -17,7 +17,7 @@ function setError(message = "") { const box = $("errorBox"); box.textContent = m
 function boardFromResponse(data) {
   state.board = data;
   $("boardSize").textContent = `${data.width} × ${data.height}`;
-  $("boardSource").textContent = data.source === "upload" ? "사용자 스크린샷" : "Sample_Board.png";
+  $("boardSource").textContent = data.source === "upload" ? "사용자 스크린샷" : "Default.png";
   $("foundRewards").textContent = data.found_rewards;
   $("remainingRewards").textContent = `남은 보상 ${data.remaining_rewards}`;
   $("unknownCells").textContent = data.unknown_count;
@@ -123,7 +123,7 @@ document.addEventListener("paste", (event) => {
   event.preventDefault();
   analyzeUserImage(file, "클립보드 캡처 이미지");
 });
-$("sampleButton").addEventListener("click", () => { $("fileLabel").textContent = "샘플 보드 사용 중"; $("imageInput").value = ""; analyze(); });
+$("sampleButton").addEventListener("click", () => { $("fileLabel").textContent = "기본 보드 사용 중"; $("imageInput").value = ""; analyze(); });
 $("recommendButton").addEventListener("click", recommend);
 $("mode").addEventListener("change", () => $("iterationWrap").classList.toggle("visible", $("mode").value === "monte_carlo"));
 window.addEventListener("resize", drawBoard);

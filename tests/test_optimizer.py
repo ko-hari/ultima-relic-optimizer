@@ -27,3 +27,31 @@ def test_automatic_items_are_not_recommendation_candidates():
     )
     assert result
     assert {item.item for item in result} == {"Boom"}
+
+
+def test_area_target_keeps_current_coverage_first_then_preserves_next_lazers():
+    board = Board.create(5)
+    for x, y in {
+        (4, 0),
+        (2, 2),
+        (0, 4),
+        (1, 0),
+        (2, 0),
+        (2, 3),
+        (3, 0),
+        (1, 2),
+    }:
+        board.set_state(x, y, "no_reward")
+
+    results = exhaustive_recommendations(board, {"Boom": 1}, top_n=25)
+    top = results[0]
+
+    assert top.target == (3, 3)
+    assert top.expected_newly_explored_cells == 7
+    assert top.next_lazer_x_cells == 5
+    assert top.next_lazer_y_cells == 4
+    assert top.next_lazer_average_cells == 4.5
+
+    same_coverage_weaker_future = next(item for item in results if item.target == (3, 2))
+    assert same_coverage_weaker_future.expected_newly_explored_cells == 7
+    assert same_coverage_weaker_future.next_lazer_average_cells == 4.0

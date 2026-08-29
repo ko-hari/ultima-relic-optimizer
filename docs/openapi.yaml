@@ -32,7 +32,7 @@ paths:
       tags: [analysis]
       operationId: analyzeBoardImage
       summary: Detect board state and item quantities from a screenshot
-      description: If image is omitted, the bundled Sample_Board.png is analyzed.
+      description: If image is omitted, the bundled Default.png is analyzed.
       requestBody:
         required: false
         content:
@@ -182,7 +182,7 @@ components:
               enum: [opencv, pillow/numpy]
             source:
               type: string
-              enum: [upload, sample]
+              enum: [upload, default]
     Objective:
       type: string
       enum:
@@ -223,6 +223,9 @@ components:
         - probability_of_completion
         - score
         - reason
+        - next_lazer_x_cells
+        - next_lazer_y_cells
+        - next_lazer_average_cells
       properties:
         item:
           type: string
@@ -243,6 +246,18 @@ components:
         probability_of_completion: {type: number, minimum: 0, maximum: 1}
         score: {type: number}
         reason: {type: string}
+        next_lazer_x_cells:
+          type: number
+          minimum: 0
+          description: Best number of cells a Lazer X could reveal after this 3x3 action; zero for non-area items.
+        next_lazer_y_cells:
+          type: number
+          minimum: 0
+          description: Best number of cells a Lazer Y could reveal after this 3x3 action; zero for non-area items.
+        next_lazer_average_cells:
+          type: number
+          minimum: 0
+          description: Equal-probability average of the next best Lazer X and Lazer Y coverage, used as the final area-target tie-breaker.
     RecommendationResponse:
       type: object
       required: [recommendations, mode, iterations]

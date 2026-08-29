@@ -17,7 +17,7 @@ from optimizer.exhaustive import exhaustive_recommendations
 from optimizer.monte_carlo import monte_carlo_recommendations
 
 
-DEFAULT_IMAGE = Path(__file__).with_name("Sample_Board.png")
+DEFAULT_IMAGE = Path(__file__).with_name("Default.png")
 OBJECTIVES = {
     "balanced": "균형형",
     "maximize_expected_rewards": "기대 보상",

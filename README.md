@@ -1,252 +1,79 @@
-# 메이플스토리 울티마 유물탐사 최적화 프로그램
+# Board Item Optimizer
 
-메이플스토리의 **울티마 유물탐사 이벤트**에서 현재 보드 상태와 보유 아이템을 분석하여, 기대 보상과 탐색 효율이 높은 행동을 추천하는 최적화 프로그램입니다.
+보드 스크린샷을 분석하고, 현재 아이템으로 기대 보상과 탐색량을 최대화하는 표적을 추천하는 Python 프로그램입니다.
 
-보드 스크린샷을 업로드하면 이미지에서 격자와 각 칸의 상태를 자동으로 분석하고, 현재 사용할 수 있는 아이템의 효과를 고려하여 가장 효율적인 선택지를 계산합니다.
+## 프로그램 명세
 
----
+- [구현 및 Discord Bot 연동 명세](docs/PROGRAM_SPEC.md)
+- [OpenAPI 3.1 API 계약](docs/openapi.yaml)
 
-## 주요 기능
+## 실행
 
-* 울티마 유물탐사 보드 스크린샷 자동 분석
-* 5×5, 10×10, 15×15 보드 자동 판별
-* 확인되지 않은 칸, 빈 칸, 발견된 보상 자동 분류
-* 하단 아이템 슬롯의 보유 수량 자동 인식
-* 현재 보드 상태를 기반으로 아이템 사용 위치 추천
-* 정확한 기대값 계산
-* Monte Carlo 시뮬레이션 지원
-* 추천 결과 Top 5 제공
-* 추천 위치를 원본 이미지 위에 오버레이하여 시각화
-* 웹 브라우저 기반 GUI 제공
-
----
-
-## 지원 아이템
-
-현재 다음과 같은 울티마 유물탐사 아이템을 고려하여 최적의 행동을 계산합니다.
-
-* Boom
-* Special Boom
-* Lazer X
-* Lazer Y
-
-`Gunpowder Barrel`과 `Key`는 획득 즉시 자동으로 사용되는 아이템이므로 별도의 보유 수량 입력이나 추천 후보에서는 제외됩니다.
-
-`Lazer X`와 `Lazer Y`의 경우 동일한 효과를 발생시키는 후보가 여러 개 존재할 수 있으므로 중복 추천을 제거합니다.
-
-* `Lazer X`: 동일 행에 대한 중복 후보 제거
-* `Lazer Y`: 동일 열에 대한 중복 후보 제거
-
----
-
-## 보드 분석
-
-프로그램은 입력된 스크린샷에서 게임 보드 영역을 찾고 격자의 크기를 자동으로 판별합니다.
-
-현재 지원되는 보드 크기와 전체 보상 개수는 다음과 같습니다.
-
-| 보드 크기 | 전체 보상 수 |
-| ----- | ------: |
-| 5×5   |       8 |
-| 10×10 |      32 |
-| 15×15 |      72 |
-
-각 칸은 이미지 분석 결과에 따라 다음과 같은 상태로 구분됩니다.
-
-* **미확인 칸**: 아직 보상 여부를 확인하지 않은 칸
-* **빈 칸**: 확인했지만 보상이 존재하지 않는 칸
-* **발견된 보상**: 이미 보상이 발견된 칸
-
-이미 확인된 칸은 이후 아이템 효과의 대상에서 제외됩니다.
-
----
-
-## 추천 계산
-
-현재까지 발견된 보상 수와 남아 있는 미확인 칸 수를 기반으로 각 미확인 칸에 보상이 존재할 확률을 계산합니다.
-
-기본 계산에서는 조건부 균등 보상 분포를 사용하여 아이템 사용 시 얻을 수 있는 **정확한 기대값**을 계산합니다.
-
-필요한 경우 Monte Carlo 시뮬레이션을 이용하여 각 후보를 반복적으로 시뮬레이션할 수도 있습니다.
-
-추천 순위는 다음과 같은 요소를 종합하여 계산됩니다.
-
-* 발견할 것으로 기대되는 보상 수
-* 한 번의 행동으로 확인할 수 있는 칸 수
-* 이미 확인된 칸과의 중복
-* 아이템 효과 범위
-* 현재 남아 있는 보상의 확률 분포
-
-추천 결과는 상위 5개 후보까지 표시됩니다.
-
----
-
-## 좌표 체계
-
-사용자에게 표시되는 보드 좌표는 사람이 읽기 쉽도록 **1부터 시작**합니다.
-
-예:
-
-```text
-(1, 1)
-(3, 7)
-(15, 15)
+```powershell
+python main.py
 ```
 
-프로그램 내부의 배열 및 모델에서는 일반적인 Python 인덱스 방식에 따라 **0부터 시작하는 좌표**를 사용합니다.
+기본 실행은 `Default.png`를 열어 GUI를 표시합니다. 콘솔에서 결과만 보려면:
 
----
+```powershell
+python main.py --no-gui
+python main.py --no-gui --monte-carlo 10000 --inventory "Boom=1,Special Boom=1,Lazer X=1,Lazer Y=1"
+```
+
+OpenCV가 설치된 Conda 환경에서는 다음처럼 실행하면 Canny/contour 기반 보드 영역 검출을 사용합니다.
+
+```powershell
+conda activate travel
+python -m pip install -r requirements.txt
+python main.py
+```
 
 ## 웹 GUI
 
-웹 GUI를 사용하면 별도의 데스크톱 프로그램 없이 브라우저에서 프로그램을 사용할 수 있습니다.
-
-지원 기능:
-
-* 이미지 파일 업로드
-* 클립보드 이미지 붙여넣기 (`Ctrl + V`)
-* 샘플 보드 불러오기
-* 자동 보드 분석
-* 인식된 아이템 수량 확인
-* 목표 함수 설정
-* 정확 기대값 계산
-* Monte Carlo 계산
-* 추천 결과 Top 5 표시
-* 원본 이미지 위 추천 위치 시각화
-
-실행:
-
-```bash
+```powershell
+conda activate travel
 python -m pip install -r requirements.txt
 python web_app.py
 ```
 
-기본 접속 주소:
+브라우저에서 `http://127.0.0.1:5000`을 엽니다. 웹 GUI는 이미지 업로드, 클립보드 캡처 이미지 `Ctrl+V` 붙여넣기, 샘플 보드 분석, 아이템 수량/목표 함수 설정, 정확 기대값 또는 Monte Carlo 계산, Top-5 추천과 원본 이미지 오버레이를 제공합니다.
 
-```text
-http://127.0.0.1:5000
-```
+보드 크기는 스크린샷 격자에서 자동 판별하며 총 보상 수는 5×5=8, 10×10=32, 15×15=72로 고정됩니다. 하단 네 아이템 슬롯의 `×수량`을 자동 인식하므로 보상 수와 아이템 수량을 별도로 입력하지 않습니다.
 
----
+`Gunpowder Barrel`과 `Key`는 획득 즉시 자동 발동하므로 수량 입력과 추천 후보에서 제외됩니다. `Lazer X`는 행마다, `Lazer Y`는 열마다 동일 효과 후보를 하나로 묶어 중복 추천하지 않습니다.
 
-## CLI 실행
-
-웹 GUI를 사용하지 않고 Python 프로그램을 직접 실행할 수도 있습니다.
-
-기본 실행:
-
-```bash
-python main.py
-```
-
-기본적으로 `Sample_Board.png`를 이용하여 분석을 수행합니다.
-
-GUI 없이 콘솔 결과만 확인하려면:
-
-```bash
-python main.py --no-gui
-```
-
-Monte Carlo 반복 횟수와 보유 아이템을 직접 지정할 수도 있습니다.
-
-```bash
-python main.py \
-  --no-gui \
-  --monte-carlo 10000 \
-  --inventory "Boom=1,Special Boom=1,Lazer X=1,Lazer Y=1"
-```
-
----
-
-## OpenCV 기반 이미지 분석
-
-OpenCV가 설치되어 있는 환경에서는 Canny Edge Detection과 contour 분석을 이용하여 보드 영역을 탐지합니다.
-
-```bash
-python -m pip install -r requirements.txt
-python main.py
-```
-
-OpenCV를 사용할 수 없는 환경에서도 Pillow와 NumPy를 이용한 기본 분석 기능을 사용할 수 있습니다.
-
-샘플 이미지의 경우 이미지 색상과 격자 패턴을 분석하여 다음과 같이 분류합니다.
-
-* 석재 계열 → 미확인 칸
-* 갈색 계열 → 빈 칸
-* 보라색 / 파란색 아이콘 → 발견된 보상
-
----
+좌표는 사람이 읽기 쉽게 1부터 표시되며, 내부 모델은 0부터 시작합니다. 샘플 이미지 분석은 Pillow/NumPy만 사용해 15×15 영역을 찾고, 석재/갈색/보라·파랑 아이콘을 각각 미확인/빈 칸/발견 보상으로 분류합니다.
 
 ## 테스트
 
-프로젝트에는 주요 기능을 검증하기 위한 테스트가 포함되어 있습니다.
-
-```bash
+```powershell
 pytest -q
 ```
 
-주요 테스트 대상:
+핵심 계산은 조건부 균등 보상 분포의 정확한 초등적 기대값을 사용합니다. `--monte-carlo N`을 주면 분석 후보를 N회 몬테카를로 시뮬레이션으로 검증합니다.
 
-* 보드 모델
-* 아이템 효과
-* 보상 확률 계산
-* 이미지 분석
-* 최적화 알고리즘
-* 웹 API
-* 웹 애플리케이션
+## Raspberry Pi 4B · Raspberry Pi OS Lite 64-bit
 
----
+Lite 환경에서는 Tkinter 데스크톱 GUI를 설치하지 않고 웹 GUI만 실행합니다. 프로젝트를 공백이 없는 경로에 복사한 후 다음 설치 스크립트를 실행합니다.
 
-## 프로젝트 구조
-
-```text
-.
-├── README.md
-├── main.py
-├── web_app.py
-├── image_analysis.py
-├── board_item_optimizer_spec.json
-│
-├── engine/
-│   ├── effects.py
-│   ├── probability.py
-│   └── simulator.py
-│
-├── models/
-│   ├── board.py
-│   ├── cell.py
-│   └── item.py
-│
-├── optimizer/
-│   ├── exhaustive.py
-│   ├── greedy.py
-│   └── monte_carlo.py
-│
-├── web/
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
-│
-├── docs/
-│   ├── PROGRAM_SPEC.md
-│   └── openapi.yaml
-│
-└── tests/
+```bash
+cd ~/travel
+bash scripts/install_raspberry_pi_lite.sh
 ```
 
----
+설치 스크립트는 다음 작업을 수행합니다.
 
-## 프로그램 명세
+- ARM64용 `opencv-python-headless`와 Gunicorn 설치
+- DejaVu Bold 폰트를 설치해 하단 아이템 수량 OCR에 사용
+- `.venv` 가상환경 생성
+- 부팅 시 자동 실행되는 `board-item-optimizer.service` 등록
+- 모든 LAN 인터페이스의 포트 5000에서 웹 서버 실행
+- 업로드 이미지 8MB, Monte Carlo 최대 10,000회로 제한
 
-보다 자세한 구현 구조와 API 정의는 다음 문서에서 확인할 수 있습니다.
+다른 기기에서 `http://라즈베리파이_IP:5000`으로 접속합니다.
 
-* [프로그램 구현 명세](docs/PROGRAM_SPEC.md)
-* [OpenAPI 3.1 API 계약](docs/openapi.yaml)
-
----
-
-## 개발 목적
-
-이 프로젝트는 울티마 유물탐사에서 단순히 직관적으로 아이템을 사용하는 대신, 현재까지 공개된 보드 정보를 기반으로 각 행동의 기대 효과를 계산하여 보다 효율적인 탐사 전략을 선택하는 것을 목적으로 합니다.
-
-확률 계산, 아이템 효과 시뮬레이션, 이미지 분석을 결합하여 사용자가 스크린샷만 제공하면 현재 상황에서 유리한 행동을 자동으로 추천하도록 구성되어 있습니다.
+```bash
+sudo systemctl status board-item-optimizer
+journalctl -u board-item-optimizer -f
+sudo systemctl restart board-item-optimizer
+```

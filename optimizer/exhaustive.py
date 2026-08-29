@@ -15,5 +15,13 @@ def exhaustive_recommendations(board: Board, inventory: dict[str, int], objectiv
         if definition.auto_activates or board.width not in definition.available_sizes:
             continue
         evaluations.extend(evaluate_item(board, item_name, objective))
-    evaluations.sort(key=lambda e: (e.score, e.expected_rewards, e.expected_newly_explored_cells), reverse=True)
+    evaluations.sort(
+        key=lambda e: (
+            e.score,
+            e.expected_rewards,
+            e.expected_newly_explored_cells,
+            e.next_lazer_average_cells,
+        ),
+        reverse=True,
+    )
     return evaluations[:top_n]
